@@ -8,7 +8,7 @@ import Layout from '../layouts/Layout.astro';
     <header class="hero">
       <h1 class="hero-title">ELDEN RING</h1>
       <div class="hero-divider"></div>
-      <p class="hero-subtitle">Interactive Map Explorer</p>
+      <p class="hero-subtitle">The Lands Between</p>
     </header>
 
     <!-- Map Container -->
@@ -156,22 +156,4 @@ import Layout from '../layouts/Layout.astro';
   // Example marker
   const marker = L.marker([51.5, -0.09]).addTo(map);
   marker.bindPopup('<b>Godrick the Grafted</b><br>Stormveil Castle').openPopup();
-</script>nterface Props {
-  title: string;
-}
-
-const { title } = Astro.props;
----
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+</script>
