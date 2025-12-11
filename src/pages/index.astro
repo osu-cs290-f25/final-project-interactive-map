@@ -169,7 +169,6 @@ import MarkerModal from '../components/MarkerModal.astro';
 
 <script>
   import L from 'leaflet';
-  import 'leaflet-draw';
 
   // ===== STATE =====
   let map: L.Map;
@@ -177,13 +176,14 @@ import MarkerModal from '../components/MarkerModal.astro';
   let currentTool = 'pencil';
   let currentColor = '#c19d53';
   let currentWidth = 3;
+  let markers: any[] = [];
+  let drawings: any[] = [];
+  let allDrawingLayers: L.Polyline[] = [];
+
+  // Drawing state
   let isDrawing = false;
   let currentPath: L.Polyline | null = null;
   let currentPoints: L.LatLng[] = [];
-  let markers: any[] = [];
-  let drawings: any[] = [];
-  let drawHistory: any[] = [];
-  let historyIndex = -1;
 
   // Check if logged in
   function isLoggedIn() {
@@ -210,12 +210,10 @@ import MarkerModal from '../components/MarkerModal.astro';
       zoomDelta: 0.5,
     });
 
-    // Add Elden Ring map image
     const imageUrl = '/EldenRingMap.jpg';
     L.imageOverlay(imageUrl, imageBounds).addTo(map);
     map.fitBounds(imageBounds);
 
-    // Load saved data
     loadMarkers();
     loadDrawings();
     showWarning();
@@ -284,17 +282,15 @@ import MarkerModal from '../components/MarkerModal.astro';
       Boss: '⚔️',
       Item: '💎',
       NPC: '👤',
-      SiteOfGrace: '✨',
       Other: '📍',
     };
     return emojis[type] || '📍';
   }
 
-  // Global function for delete button in popup
   (window as any).deleteMarker = (id: number) => {
     markers = markers.filter(m => m.id !== id);
     saveMarkers();
-    location.reload(); // Simple refresh to re-render
+    location.reload();
   };
 
   // ===== DRAWING FUNCTIONS =====
@@ -312,20 +308,8 @@ import MarkerModal from '../components/MarkerModal.astro';
     const coords = JSON.parse(data.coordinates);
     const style = JSON.parse(data.style);
     
-    switch (data.type) {
-      case 'path':
-        L.polyline(coords, style).addTo(map);
-        break;
-      case 'line':
-        L.polyline(coords, style).addTo(map);
-        break;
-      case 'circle':
-        L.circle(coords[0], { ...style, radius: coords[1] }).addTo(map);
-        break;
-      case 'polygon':
-        L.polygon(coords, style).addTo(map);
-        break;
-    }
+    const line = L.polyline(coords, style).addTo(map);
+    allDrawingLayers.push(line);
   }
 
   function startDrawing(e: L.LeafletMouseEvent) {
@@ -334,23 +318,19 @@ import MarkerModal from '../components/MarkerModal.astro';
     isDrawing = true;
     currentPoints = [e.latlng];
 
-    if (currentTool === 'pencil') {
-      currentPath = L.polyline([e.latlng], {
-        color: currentColor,
-        weight: currentWidth,
-        opacity: 0.8,
-      }).addTo(map);
-    }
+    currentPath = L.polyline([e.latlng], {
+      color: currentColor,
+      weight: currentWidth,
+      opacity: 0.8,
+      smoothFactor: 1,
+    }).addTo(map);
   }
 
   function continueDrawing(e: L.LeafletMouseEvent) {
-    if (!isDrawing || currentMode !== 'draw') return;
+    if (!isDrawing || currentMode !== 'draw' || !currentPath) return;
 
     currentPoints.push(e.latlng);
-
-    if (currentTool === 'pencil' && currentPath) {
-      currentPath.setLatLngs(currentPoints);
-    }
+    currentPath.setLatLngs(currentPoints);
   }
 
   function finishDrawing(e: L.LeafletMouseEvent) {
@@ -360,48 +340,56 @@ import MarkerModal from '../components/MarkerModal.astro';
     
     if (currentPoints.length < 2) {
       if (currentPath) map.removeLayer(currentPath);
+      currentPath = null;
+      currentPoints = [];
       return;
     }
 
-    const drawing = {
-      id: Date.now(),
-      type: currentTool === 'pencil' ? 'path' : currentTool,
-      coordinates: JSON.stringify(currentPoints),
-      style: JSON.stringify({
-        color: currentColor,
-        weight: currentWidth,
-        opacity: 0.8,
-      }),
-      zoom_level: map.getZoom(),
-    };
+    if (currentPath) {
+      allDrawingLayers.push(currentPath);
+      
+      const drawing = {
+        id: Date.now(),
+        coordinates: JSON.stringify(currentPoints.map(p => [p.lat, p.lng])),
+        style: JSON.stringify({
+          color: currentColor,
+          weight: currentWidth,
+          opacity: 0.8,
+        }),
+      };
 
-    drawings.push(drawing);
-    saveDrawings();
-    addToHistory(drawing);
+      drawings.push(drawing);
+      saveDrawings();
+      showWarning();
+    }
     
     currentPath = null;
     currentPoints = [];
-    showWarning();
   }
 
-  function addToHistory(action: any) {
-    historyIndex++;
-    drawHistory = drawHistory.slice(0, historyIndex);
-    drawHistory.push(action);
-  }
+  function handleEraser(e: L.LeafletMouseEvent) {
+    if (currentMode !== 'draw' || currentTool !== 'eraser') return;
+    
+    const clickPoint = e.latlng;
+    let closestDrawing: L.Polyline | null = null;
+    let minDistance = Infinity;
 
-  function undo() {
-    if (historyIndex < 0) return;
-    historyIndex--;
-    // TODO: Implement proper undo (would need to track layers)
-    location.reload();
-  }
+    allDrawingLayers.forEach(drawing => {
+      const latlngs = drawing.getLatLngs() as L.LatLng[];
+      latlngs.forEach(point => {
+        const distance = clickPoint.distanceTo(point);
+        if (distance < minDistance && distance < 50) {
+          minDistance = distance;
+          closestDrawing = drawing;
+        }
+      });
+    });
 
-  function redo() {
-    if (historyIndex >= drawHistory.length - 1) return;
-    historyIndex++;
-    // TODO: Implement proper redo
-    location.reload();
+    if (closestDrawing) {
+      map.removeLayer(closestDrawing);
+      allDrawingLayers = allDrawingLayers.filter(d => d !== closestDrawing);
+      location.reload(); // Simple refresh to sync with localStorage
+    }
   }
 
   // ===== MODE SWITCHING =====
@@ -434,7 +422,6 @@ import MarkerModal from '../components/MarkerModal.astro';
     const modal = document.getElementById('marker-modal');
     if (modal) modal.style.display = 'flex';
     
-    // Set coordinates in hidden fields
     (document.getElementById('marker-lat') as HTMLInputElement).value = coords.lat.toString();
     (document.getElementById('marker-lng') as HTMLInputElement).value = coords.lng.toString();
   }
@@ -443,7 +430,6 @@ import MarkerModal from '../components/MarkerModal.astro';
     const modal = document.getElementById('marker-modal');
     if (modal) modal.style.display = 'none';
     
-    // Reset form
     (document.getElementById('marker-form') as HTMLFormElement).reset();
     pendingMarkerCoords = null;
   };
@@ -456,6 +442,8 @@ import MarkerModal from '../components/MarkerModal.astro';
     map.on('click', (e) => {
       if (currentMode === 'marker') {
         openMarkerModal(e.latlng);
+      } else if (currentMode === 'draw' && currentTool === 'eraser') {
+        handleEraser(e);
       }
     });
 
@@ -499,10 +487,6 @@ import MarkerModal from '../components/MarkerModal.astro';
       if (sizeValue) sizeValue.textContent = `${currentWidth}px`;
     });
 
-    // Undo/Redo
-    document.getElementById('undo-btn')?.addEventListener('click', undo);
-    document.getElementById('redo-btn')?.addEventListener('click', redo);
-
     // Reset all
     document.getElementById('reset-all-btn')?.addEventListener('click', () => {
       if (confirm('Delete ALL markers and drawings? This cannot be undone.')) {
@@ -536,7 +520,6 @@ import MarkerModal from '../components/MarkerModal.astro';
     });
   });
 
-  // Auth modal placeholder
   (window as any).showAuthModal = () => {
     alert('OAuth login coming soon! For now, your data is saved locally.');
   };
