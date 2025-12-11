@@ -1,8 +1,14 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import WarningBanner from '../components/WarningBanner.astro';
+import ModeSwitcher from '../components/ModeSwitcher.astro';
+import DrawingToolbar from '../components/DrawingToolbar.astro';
+import MarkerModal from '../components/MarkerModal.astro';
 ---
 
-<Layout title="Elden Ring Explorer">
+<Layout title="The Lands Between | Elden Ring Explorer">
+  <WarningBanner />
+  
   <main>
     <!-- Header -->
     <header class="hero">
@@ -14,10 +20,12 @@ import Layout from '../layouts/Layout.astro';
     <!-- Map Container -->
     <section class="map-section">
       <div id="map"></div>
+      <ModeSwitcher />
+      <DrawingToolbar />
     </section>
-
-    <!-- Future: Sidebar/Filters will go here -->
   </main>
+
+  <MarkerModal />
 </Layout>
 
 <style>
@@ -27,7 +35,6 @@ import Layout from '../layouts/Layout.astro';
     flex-direction: column;
   }
 
-  /* Header Styles */
   .hero {
     padding: 3rem 2rem 2rem;
     text-align: center;
@@ -44,11 +51,7 @@ import Layout from '../layouts/Layout.astro';
     transform: translateX(-50%);
     width: 60%;
     height: 1px;
-    background: linear-gradient(90deg, 
-      transparent, 
-      var(--gold), 
-      transparent
-    );
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
   }
 
   .hero-title {
@@ -92,7 +95,6 @@ import Layout from '../layouts/Layout.astro';
     font-weight: 500;
   }
 
-  /* Map Section */
   .map-section {
     flex: 1;
     position: relative;
@@ -107,10 +109,15 @@ import Layout from '../layouts/Layout.astro';
     border-top: 1px solid var(--brown);
   }
 
-  /* Leaflet Override Styles */
+  /* Leaflet overrides */
   :global(.leaflet-container) {
     background: var(--black-light);
     font-family: var(--font-body);
+    cursor: crosshair; /* Default cursor for marker mode */
+  }
+
+  :global(.leaflet-container.draw-mode) {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="20" font-size="20">✏️</text></svg>') 0 24, auto;
   }
 
   :global(.leaflet-popup-content-wrapper) {
@@ -125,7 +132,26 @@ import Layout from '../layouts/Layout.astro';
     border: 1px solid var(--bronze);
   }
 
-  /* Responsive */
+  :global(.marker-icon) {
+    background: none !important;
+    border: none !important;
+  }
+
+  :global(.marker-pin) {
+    font-size: 32px;
+    text-shadow: 
+      0 0 10px rgba(193, 157, 83, 0.8),
+      0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Marker type colors */
+  :global(.marker-Quest) { filter: hue-rotate(0deg); } /* Gold */
+  :global(.marker-Boss) { filter: hue-rotate(330deg) brightness(1.2); } /* Red */
+  :global(.marker-Item) { filter: hue-rotate(210deg); } /* Blue */
+  :global(.marker-NPC) { filter: hue-rotate(90deg); } /* Green */
+  :global(.marker-SiteOfGrace) { filter: brightness(1.5); } /* White */
+  :global(.marker-Other) { filter: sepia(1); } /* Bronze */
+
   @media (max-width: 768px) {
     .hero {
       padding: 2rem 1rem 1.5rem;
@@ -143,29 +169,375 @@ import Layout from '../layouts/Layout.astro';
 
 <script>
   import L from 'leaflet';
+  import 'leaflet-draw';
 
-  // Define the image bounds (Leaflet uses lat/lng coordinates)
-  // For a static image, we create an arbitrary coordinate system
-  const imageBounds = [[0, 0], [1000, 1000]];  // [south, west], [north, east]
+  // ===== STATE =====
+  let map: L.Map;
+  let currentMode: 'marker' | 'draw' = 'marker';
+  let currentTool = 'pencil';
+  let currentColor = '#c19d53';
+  let currentWidth = 3;
+  let isDrawing = false;
+  let currentPath: L.Polyline | null = null;
+  let currentPoints: L.LatLng[] = [];
+  let markers: any[] = [];
+  let drawings: any[] = [];
+  let drawHistory: any[] = [];
+  let historyIndex = -1;
 
-  // Initialize map with CRS.Simple (for non-geographic images)
-  const map = L.map('map', {
-    crs: L.CRS.Simple,
-    minZoom: -2,
-    maxZoom: 2,
-    zoomSnap: 0.25,
-    zoomDelta: 0.5,
+  // Check if logged in
+  function isLoggedIn() {
+    return document.cookie.includes('session=');
+  }
+
+  // Show warning if not logged in
+  function showWarning() {
+    if (!isLoggedIn()) {
+      const banner = document.getElementById('warning-banner');
+      if (banner) banner.style.display = 'flex';
+    }
+  }
+
+  // ===== INITIALIZE MAP =====
+  function initMap() {
+    const imageBounds: L.LatLngBoundsExpression = [[0, 0], [1000, 1000]];
+    
+    map = L.map('map', {
+      crs: L.CRS.Simple,
+      minZoom: -2,
+      maxZoom: 2,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
+    });
+
+    // Add Elden Ring map image
+    const imageUrl = '/EldenRingMap.jpg';
+    L.imageOverlay(imageUrl, imageBounds).addTo(map);
+    map.fitBounds(imageBounds);
+
+    // Load saved data
+    loadMarkers();
+    loadDrawings();
+    showWarning();
+  }
+
+  // ===== MARKER FUNCTIONS =====
+  function loadMarkers() {
+    const saved = localStorage.getItem('elden_markers');
+    markers = saved ? JSON.parse(saved) : [];
+    markers.forEach(renderMarker);
+  }
+
+  function saveMarkers() {
+    localStorage.setItem('elden_markers', JSON.stringify(markers));
+  }
+
+  function renderMarker(data: any) {
+    const icon = L.divIcon({
+      className: `marker-icon marker-${data.type}`,
+      html: `<div class="marker-pin">${getMarkerEmoji(data.type)}</div>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 40],
+    });
+
+    const marker = L.marker([data.lat, data.lng], { icon }).addTo(map);
+    
+    const popupContent = `
+      <div style="padding: 0.5rem;">
+        <h3 style="margin: 0 0 0.5rem 0; color: var(--gold); font-family: var(--font-display);">
+          ${data.title}
+        </h3>
+        <p style="margin: 0 0 0.25rem 0; color: var(--bronze); font-size: 0.85rem;">
+          <strong>Type:</strong> ${data.type}
+        </p>
+        ${data.notes ? `<p style="margin: 0.5rem 0; font-size: 0.9rem;">${data.notes}</p>` : ''}
+        <p style="margin: 0.5rem 0 0 0;">
+          <span style="color: ${data.completed ? '#44ff44' : '#ff4444'};">
+            ${data.completed ? '✓ Completed' : '○ Not completed'}
+          </span>
+        </p>
+        <button 
+          onclick="deleteMarker(${data.id})" 
+          style="
+            margin-top: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #8b2424;
+            color: white;
+            border: 1px solid #ff4444;
+            cursor: pointer;
+            font-family: var(--font-display);
+            font-size: 0.8rem;
+            border-radius: 4px;
+          "
+        >
+          Delete
+        </button>
+      </div>
+    `;
+    
+    marker.bindPopup(popupContent);
+  }
+
+  function getMarkerEmoji(type: string): string {
+    const emojis: Record<string, string> = {
+      Quest: '📜',
+      Boss: '⚔️',
+      Item: '💎',
+      NPC: '👤',
+      SiteOfGrace: '✨',
+      Other: '📍',
+    };
+    return emojis[type] || '📍';
+  }
+
+  // Global function for delete button in popup
+  (window as any).deleteMarker = (id: number) => {
+    markers = markers.filter(m => m.id !== id);
+    saveMarkers();
+    location.reload(); // Simple refresh to re-render
+  };
+
+  // ===== DRAWING FUNCTIONS =====
+  function loadDrawings() {
+    const saved = localStorage.getItem('elden_drawings');
+    drawings = saved ? JSON.parse(saved) : [];
+    drawings.forEach(renderDrawing);
+  }
+
+  function saveDrawings() {
+    localStorage.setItem('elden_drawings', JSON.stringify(drawings));
+  }
+
+  function renderDrawing(data: any) {
+    const coords = JSON.parse(data.coordinates);
+    const style = JSON.parse(data.style);
+    
+    switch (data.type) {
+      case 'path':
+        L.polyline(coords, style).addTo(map);
+        break;
+      case 'line':
+        L.polyline(coords, style).addTo(map);
+        break;
+      case 'circle':
+        L.circle(coords[0], { ...style, radius: coords[1] }).addTo(map);
+        break;
+      case 'polygon':
+        L.polygon(coords, style).addTo(map);
+        break;
+    }
+  }
+
+  function startDrawing(e: L.LeafletMouseEvent) {
+    if (currentMode !== 'draw' || currentTool === 'eraser') return;
+    
+    isDrawing = true;
+    currentPoints = [e.latlng];
+
+    if (currentTool === 'pencil') {
+      currentPath = L.polyline([e.latlng], {
+        color: currentColor,
+        weight: currentWidth,
+        opacity: 0.8,
+      }).addTo(map);
+    }
+  }
+
+  function continueDrawing(e: L.LeafletMouseEvent) {
+    if (!isDrawing || currentMode !== 'draw') return;
+
+    currentPoints.push(e.latlng);
+
+    if (currentTool === 'pencil' && currentPath) {
+      currentPath.setLatLngs(currentPoints);
+    }
+  }
+
+  function finishDrawing(e: L.LeafletMouseEvent) {
+    if (!isDrawing || currentMode !== 'draw') return;
+    
+    isDrawing = false;
+    
+    if (currentPoints.length < 2) {
+      if (currentPath) map.removeLayer(currentPath);
+      return;
+    }
+
+    const drawing = {
+      id: Date.now(),
+      type: currentTool === 'pencil' ? 'path' : currentTool,
+      coordinates: JSON.stringify(currentPoints),
+      style: JSON.stringify({
+        color: currentColor,
+        weight: currentWidth,
+        opacity: 0.8,
+      }),
+      zoom_level: map.getZoom(),
+    };
+
+    drawings.push(drawing);
+    saveDrawings();
+    addToHistory(drawing);
+    
+    currentPath = null;
+    currentPoints = [];
+    showWarning();
+  }
+
+  function addToHistory(action: any) {
+    historyIndex++;
+    drawHistory = drawHistory.slice(0, historyIndex);
+    drawHistory.push(action);
+  }
+
+  function undo() {
+    if (historyIndex < 0) return;
+    historyIndex--;
+    // TODO: Implement proper undo (would need to track layers)
+    location.reload();
+  }
+
+  function redo() {
+    if (historyIndex >= drawHistory.length - 1) return;
+    historyIndex++;
+    // TODO: Implement proper redo
+    location.reload();
+  }
+
+  // ===== MODE SWITCHING =====
+  function switchMode(mode: 'marker' | 'draw') {
+    currentMode = mode;
+    
+    const markerBtn = document.getElementById('marker-mode-btn');
+    const drawBtn = document.getElementById('draw-mode-btn');
+    const toolbar = document.getElementById('drawing-toolbar');
+    const mapContainer = document.getElementById('map');
+
+    if (mode === 'marker') {
+      markerBtn?.classList.add('active');
+      drawBtn?.classList.remove('active');
+      if (toolbar) toolbar.style.display = 'none';
+      mapContainer?.classList.remove('draw-mode');
+    } else {
+      markerBtn?.classList.remove('active');
+      drawBtn?.classList.add('active');
+      if (toolbar) toolbar.style.display = 'flex';
+      mapContainer?.classList.add('draw-mode');
+    }
+  }
+
+  // ===== MODAL FUNCTIONS =====
+  let pendingMarkerCoords: L.LatLng | null = null;
+
+  function openMarkerModal(coords: L.LatLng) {
+    pendingMarkerCoords = coords;
+    const modal = document.getElementById('marker-modal');
+    if (modal) modal.style.display = 'flex';
+    
+    // Set coordinates in hidden fields
+    (document.getElementById('marker-lat') as HTMLInputElement).value = coords.lat.toString();
+    (document.getElementById('marker-lng') as HTMLInputElement).value = coords.lng.toString();
+  }
+
+  (window as any).closeMarkerModal = () => {
+    const modal = document.getElementById('marker-modal');
+    if (modal) modal.style.display = 'none';
+    
+    // Reset form
+    (document.getElementById('marker-form') as HTMLFormElement).reset();
+    pendingMarkerCoords = null;
+  };
+
+  // ===== EVENT LISTENERS =====
+  document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+
+    // Map click handler
+    map.on('click', (e) => {
+      if (currentMode === 'marker') {
+        openMarkerModal(e.latlng);
+      }
+    });
+
+    // Drawing handlers
+    map.on('mousedown', startDrawing);
+    map.on('mousemove', continueDrawing);
+    map.on('mouseup', finishDrawing);
+
+    // Mode switcher
+    document.getElementById('marker-mode-btn')?.addEventListener('click', () => {
+      switchMode('marker');
+    });
+
+    document.getElementById('draw-mode-btn')?.addEventListener('click', () => {
+      switchMode('draw');
+    });
+
+    // Drawing tools
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        (e.currentTarget as HTMLElement).classList.add('active');
+        currentTool = (e.currentTarget as HTMLElement).dataset.tool || 'pencil';
+      });
+    });
+
+    // Color buttons
+    document.querySelectorAll('.color-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        (e.currentTarget as HTMLElement).classList.add('active');
+        currentColor = (e.currentTarget as HTMLElement).dataset.color || '#c19d53';
+      });
+    });
+
+    // Line width slider
+    const slider = document.getElementById('line-width') as HTMLInputElement;
+    const sizeValue = document.getElementById('size-value');
+    slider?.addEventListener('input', (e) => {
+      currentWidth = parseInt((e.target as HTMLInputElement).value);
+      if (sizeValue) sizeValue.textContent = `${currentWidth}px`;
+    });
+
+    // Undo/Redo
+    document.getElementById('undo-btn')?.addEventListener('click', undo);
+    document.getElementById('redo-btn')?.addEventListener('click', redo);
+
+    // Reset all
+    document.getElementById('reset-all-btn')?.addEventListener('click', () => {
+      if (confirm('Delete ALL markers and drawings? This cannot be undone.')) {
+        localStorage.removeItem('elden_markers');
+        localStorage.removeItem('elden_drawings');
+        location.reload();
+      }
+    });
+
+    // Marker form submission
+    document.getElementById('marker-form')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      if (!pendingMarkerCoords) return;
+
+      const formData = {
+        id: Date.now(),
+        lat: pendingMarkerCoords.lat,
+        lng: pendingMarkerCoords.lng,
+        title: (document.getElementById('marker-title') as HTMLInputElement).value,
+        type: (document.getElementById('marker-type') as HTMLSelectElement).value,
+        notes: (document.getElementById('marker-notes') as HTMLTextAreaElement).value,
+        completed: (document.getElementById('marker-completed') as HTMLInputElement).checked,
+      };
+
+      markers.push(formData);
+      saveMarkers();
+      renderMarker(formData);
+      (window as any).closeMarkerModal();
+      showWarning();
+    });
   });
 
-  // Add the Elden Ring map image
-  const imageUrl = '/EldenRingMap.jpg';
-  L.imageOverlay(imageUrl, imageBounds).addTo(map);
-
-  // Fit the map to the image bounds
-  map.fitBounds(imageBounds);
-
-  // Example marker - adjust coordinates to match your image
-  // Coordinates are now [y, x] in the 0-1000 range we defined
-  const marker = L.marker([500, 500]).addTo(map);  // Center of map
-  marker.bindPopup('<b>Godrick the Grafted</b><br>Stormveil Castle');
+  // Auth modal placeholder
+  (window as any).showAuthModal = () => {
+    alert('OAuth login coming soon! For now, your data is saved locally.');
+  };
 </script>
