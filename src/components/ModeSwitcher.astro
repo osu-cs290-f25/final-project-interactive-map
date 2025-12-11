@@ -1,0 +1,93 @@
+---
+// Toggle between Marker and Draw modes (Elden Ring only)
+---
+
+<div class="mode-switcher">
+  <button 
+    id="marker-mode-btn" 
+    class="mode-btn active"
+    data-mode="marker"
+  >
+    <span class="icon">📍</span>
+    <span class="label">Marker Mode</span>
+  </button>
+  <button 
+    id="draw-mode-btn" 
+    class="mode-btn"
+    data-mode="draw"
+  >
+    <span class="icon">✏️</span>
+    <span class="label">Draw Mode</span>
+  </button>
+</div>
+
+<style>
+  .mode-switcher {
+    position: fixed;
+    top: 120px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 1000;
+    background: var(--black-light);
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 2px solid var(--bronze);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+
+  .mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--black);
+    border: 1px solid var(--bronze);
+    color: var(--bronze);
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    border-radius: 4px;
+  }
+
+  .mode-btn:hover {
+    background: var(--brown);
+    color: var(--gold);
+    border-color: var(--gold);
+  }
+
+  .mode-btn.active {
+    background: var(--gold);
+    color: var(--black);
+    border-color: var(--gold);
+    box-shadow: 0 0 15px rgba(193, 157, 83, 0.5);
+  }
+
+  .icon {
+    font-size: 1.2rem;
+  }
+
+  .label {
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 768px) {
+    .mode-switcher {
+      top: auto;
+      bottom: 20px;
+      right: 20px;
+      flex-direction: row;
+    }
+
+    .label {
+      display: none;
+    }
+
+    .mode-btn {
+      padding: 0.75rem;
+    }
+  }
+</style>
