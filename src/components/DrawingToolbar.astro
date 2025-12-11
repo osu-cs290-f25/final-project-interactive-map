@@ -1,0 +1,190 @@
+---
+// Drawing tools (only visible in Draw Mode)
+---
+
+<div id="drawing-toolbar" class="drawing-toolbar" style="display: none;">
+  <div class="toolbar-section">
+    <span class="section-label">Tools</span>
+    <div class="tool-group">
+      <button class="tool-btn active" data-tool="pencil" title="Freehand">
+        <span>✏️</span>
+      </button>
+      <button class="tool-btn" data-tool="line" title="Straight Line">
+        <span>📏</span>
+      </button>
+      <button class="tool-btn" data-tool="circle" title="Circle">
+        <span>⭕</span>
+      </button>
+      <button class="tool-btn" data-tool="polygon" title="Polygon">
+        <span>▭</span>
+      </button>
+      <button class="tool-btn" data-tool="eraser" title="Eraser">
+        <span>🗑️</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="toolbar-section">
+    <span class="section-label">Color</span>
+    <div class="tool-group">
+      <button class="color-btn active" data-color="#c19d53" style="background: #c19d53;" title="Gold"></button>
+      <button class="color-btn" data-color="#ff4444" style="background: #ff4444;" title="Red"></button>
+      <button class="color-btn" data-color="#4444ff" style="background: #4444ff;" title="Blue"></button>
+      <button class="color-btn" data-color="#44ff44" style="background: #44ff44;" title="Green"></button>
+      <button class="color-btn" data-color="#ffffff" style="background: #ffffff;" title="White"></button>
+    </div>
+  </div>
+
+  <div class="toolbar-section">
+    <span class="section-label">Size</span>
+    <input type="range" id="line-width" min="1" max="10" value="3" class="size-slider">
+    <span id="size-value" class="size-value">3px</span>
+  </div>
+
+  <div class="toolbar-section">
+    <div class="tool-group">
+      <button class="action-btn" id="undo-btn" title="Undo">↶</button>
+      <button class="action-btn" id="redo-btn" title="Redo">↷</button>
+    </div>
+  </div>
+
+  <div class="toolbar-section">
+    <button class="reset-btn" id="reset-all-btn">
+      <span>🔥</span>
+      <span>Reset All</span>
+    </button>
+  </div>
+</div>
+
+<style>
+  .drawing-toolbar {
+    position: fixed;
+    top: 280px;
+    right: 20px;
+    background: var(--black-light);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 2px solid var(--bronze);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 200px;
+  }
+
+  .toolbar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .section-label {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    color: var(--bronze);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .tool-group {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .tool-btn, .action-btn {
+    width: 36px;
+    height: 36px;
+    background: var(--black);
+    border: 1px solid var(--bronze);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+    border-radius: 4px;
+  }
+
+  .tool-btn:hover, .action-btn:hover {
+    background: var(--brown);
+    border-color: var(--gold);
+  }
+
+  .tool-btn.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    box-shadow: 0 0 10px rgba(193, 157, 83, 0.5);
+  }
+
+  .color-btn {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--bronze);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+
+  .color-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .color-btn.active {
+    border-color: var(--gold);
+    border-width: 3px;
+    box-shadow: 0 0 10px rgba(193, 157, 83, 0.5);
+  }
+
+  .size-slider {
+    width: 100%;
+    accent-color: var(--gold);
+  }
+
+  .size-value {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--gold);
+    text-align: center;
+  }
+
+  .reset-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: #8b2424;
+    border: 1px solid #ff4444;
+    color: #fff;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    border-radius: 4px;
+  }
+
+  .reset-btn:hover {
+    background: #ff4444;
+    box-shadow: 0 0 15px rgba(255, 68, 68, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    .drawing-toolbar {
+      top: auto;
+      bottom: 80px;
+      right: 10px;
+      left: 10px;
+      max-width: none;
+    }
+
+    .toolbar-section {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+</style>
