@@ -1,0 +1,61 @@
+---
+const currentPath = Astro.url.pathname;
+---
+
+<nav class="nav-tabs">
+  <a 
+    href="/" 
+    class:list={["nav-tab", { active: currentPath === "/" }]}
+  >
+    The Lands Between
+  </a>
+  <a 
+    href="/earth" 
+    class:list={["nav-tab", { active: currentPath === "/earth" }]}
+  >
+    The Original Lands - Earth
+  </a>
+</nav>
+
+<style>
+  .nav-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    background: var(--black);
+    border-bottom: 2px solid var(--bronze);
+    padding: 0;
+  }
+
+  .nav-tab {
+    padding: 1rem 2rem;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--bronze);
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .nav-tab:hover {
+    color: var(--gold);
+    background: var(--black-light);
+  }
+
+  .nav-tab.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+    background: var(--black-light);
+    box-shadow: 0 0 20px rgba(193, 157, 83, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    .nav-tab {
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+    }
+  }
+</style>
