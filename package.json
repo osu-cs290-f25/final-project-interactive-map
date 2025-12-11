@@ -7,13 +7,16 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "db:init": "tsx scripts/init-db.ts"
+    "db:init": "tsx scripts/init-db.ts",
+    "db:test": "tsx scripts/test-db.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",
     "astro": "^5.16.4",
     "better-sqlite3": "^12.5.0",
-    "leaflet": "^1.9.4"
+    "leaflet": "^1.9.4",
+    "leaflet-draw": "^1.0.4",
+    "arctic": "^3.7.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.6",
