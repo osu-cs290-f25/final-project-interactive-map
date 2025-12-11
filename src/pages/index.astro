@@ -1,14 +1,14 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import WarningBanner from '../components/WarningBanner.astro';
-import ModeSwitcher from '../components/ModeSwitcher.astro';
-import DrawingToolbar from '../components/DrawingToolbar.astro';
-import MarkerModal from '../components/MarkerModal.astro';
+import Layout from "../layouts/Layout.astro";
+import WarningBanner from "../components/WarningBanner.astro";
+import ModeSwitcher from "../components/ModeSwitcher.astro";
+import DrawingToolbar from "../components/DrawingToolbar.astro";
+import MarkerModal from "../components/MarkerModal.astro";
 ---
 
 <Layout title="The Lands Between | Elden Ring Explorer">
   <WarningBanner />
-  
+
   <main>
     <!-- Header -->
     <header class="hero">
@@ -38,13 +38,17 @@ import MarkerModal from '../components/MarkerModal.astro';
   .hero {
     padding: 3rem 2rem 2rem;
     text-align: center;
-    background: linear-gradient(180deg, var(--black) 0%, var(--black-light) 100%);
+    background: linear-gradient(
+      180deg,
+      var(--black) 0%,
+      var(--black-light) 100%
+    );
     border-bottom: 2px solid var(--bronze);
     position: relative;
   }
 
   .hero::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: -1px;
     left: 50%;
@@ -57,7 +61,7 @@ import MarkerModal from '../components/MarkerModal.astro';
   .hero-title {
     font-size: clamp(2.5rem, 8vw, 5rem);
     color: var(--gold);
-    text-shadow: 
+    text-shadow:
       0 0 20px rgba(193, 157, 83, 0.3),
       0 4px 8px rgba(0, 0, 0, 0.8);
     margin-bottom: 1rem;
@@ -74,7 +78,7 @@ import MarkerModal from '../components/MarkerModal.astro';
 
   .hero-divider::before,
   .hero-divider::after {
-    content: '';
+    content: "";
     position: absolute;
     width: 8px;
     height: 8px;
@@ -84,8 +88,12 @@ import MarkerModal from '../components/MarkerModal.astro';
     transform: translateY(-50%);
   }
 
-  .hero-divider::before { left: -12px; }
-  .hero-divider::after { right: -12px; }
+  .hero-divider::before {
+    left: -12px;
+  }
+  .hero-divider::after {
+    right: -12px;
+  }
 
   .hero-subtitle {
     font-size: clamp(0.9rem, 2vw, 1.2rem);
@@ -117,7 +125,10 @@ import MarkerModal from '../components/MarkerModal.astro';
   }
 
   :global(.leaflet-container.draw-mode) {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="20" font-size="20">✏️</text></svg>') 0 24, auto;
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="20" font-size="20">✏️</text></svg>')
+        0 24,
+      auto;
   }
 
   :global(.leaflet-popup-content-wrapper) {
@@ -139,18 +150,30 @@ import MarkerModal from '../components/MarkerModal.astro';
 
   :global(.marker-pin) {
     font-size: 32px;
-    text-shadow: 
+    text-shadow:
       0 0 10px rgba(193, 157, 83, 0.8),
       0 2px 4px rgba(0, 0, 0, 0.8);
   }
 
   /* Marker type colors */
-  :global(.marker-Quest) { filter: hue-rotate(0deg); } /* Gold */
-  :global(.marker-Boss) { filter: hue-rotate(330deg) brightness(1.2); } /* Red */
-  :global(.marker-Item) { filter: hue-rotate(210deg); } /* Blue */
-  :global(.marker-NPC) { filter: hue-rotate(90deg); } /* Green */
-  :global(.marker-SiteOfGrace) { filter: brightness(1.5); } /* White */
-  :global(.marker-Other) { filter: sepia(1); } /* Bronze */
+  :global(.marker-Quest) {
+    filter: hue-rotate(0deg);
+  } /* Gold */
+  :global(.marker-Boss) {
+    filter: hue-rotate(330deg) brightness(1.2);
+  } /* Red */
+  :global(.marker-Item) {
+    filter: hue-rotate(210deg);
+  } /* Blue */
+  :global(.marker-NPC) {
+    filter: hue-rotate(90deg);
+  } /* Green */
+  :global(.marker-SiteOfGrace) {
+    filter: brightness(1.5);
+  } /* White */
+  :global(.marker-Other) {
+    filter: sepia(1);
+  } /* Bronze */
 
   @media (max-width: 768px) {
     .hero {
@@ -168,13 +191,24 @@ import MarkerModal from '../components/MarkerModal.astro';
 </style>
 
 <script>
-  import L from 'leaflet';
+  import L from "leaflet";
+
+  // ===== SECURITY: HTML ESCAPING =====
+  function escapeHtml(unsafe: string): string {
+    if (!unsafe) return "";
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
 
   // ===== STATE =====
   let map: L.Map;
-  let currentMode: 'marker' | 'draw' = 'marker';
-  let currentTool = 'pencil';
-  let currentColor = '#c19d53';
+  let currentMode: "marker" | "draw" = "marker";
+  let currentTool = "pencil";
+  let currentColor = "#c19d53";
   let currentWidth = 3;
   let markers: any[] = [];
   let drawings: any[] = [];
@@ -187,22 +221,25 @@ import MarkerModal from '../components/MarkerModal.astro';
 
   // Check if logged in
   function isLoggedIn() {
-    return document.cookie.includes('session=');
+    return document.cookie.includes("session=");
   }
 
   // Show warning if not logged in
   function showWarning() {
     if (!isLoggedIn()) {
-      const banner = document.getElementById('warning-banner');
-      if (banner) banner.style.display = 'flex';
+      const banner = document.getElementById("warning-banner");
+      if (banner) banner.style.display = "flex";
     }
   }
 
   // ===== INITIALIZE MAP =====
   function initMap() {
-    const imageBounds: L.LatLngBoundsExpression = [[0, 0], [1000, 1000]];
-    
-    map = L.map('map', {
+    const imageBounds: L.LatLngBoundsExpression = [
+      [0, 0],
+      [1000, 1000],
+    ];
+
+    map = L.map("map", {
       crs: L.CRS.Simple,
       minZoom: -2,
       maxZoom: 2,
@@ -210,7 +247,7 @@ import MarkerModal from '../components/MarkerModal.astro';
       zoomDelta: 0.5,
     });
 
-    const imageUrl = '/EldenRingMap.jpg';
+    const imageUrl = "/EldenRingMap.jpg";
     L.imageOverlay(imageUrl, imageBounds).addTo(map);
     map.fitBounds(imageBounds);
 
@@ -221,100 +258,56 @@ import MarkerModal from '../components/MarkerModal.astro';
 
   // ===== MARKER FUNCTIONS =====
   function loadMarkers() {
-    const saved = localStorage.getItem('elden_markers');
+    const saved = localStorage.getItem("elden_markers");
     markers = saved ? JSON.parse(saved) : [];
     markers.forEach(renderMarker);
   }
 
   function saveMarkers() {
-    localStorage.setItem('elden_markers', JSON.stringify(markers));
+    localStorage.setItem("elden_markers", JSON.stringify(markers));
   }
 
-  function renderMarker(data: any) {
-    const icon = L.divIcon({
-      className: `marker-icon marker-${data.type}`,
-      html: `<div class="marker-pin">${getMarkerEmoji(data.type)}</div>`,
-      iconSize: [40, 40],
-      iconAnchor: [20, 40],
-    });
-
-    const marker = L.marker([data.lat, data.lng], { icon }).addTo(map);
-    
-    const popupContent = `
-      <div style="padding: 0.5rem;">
-        <h3 style="margin: 0 0 0.5rem 0; color: var(--gold); font-family: var(--font-display);">
-          ${data.title}
-        </h3>
-        <p style="margin: 0 0 0.25rem 0; color: var(--bronze); font-size: 0.85rem;">
-          <strong>Type:</strong> ${data.type}
-        </p>
-        ${data.notes ? `<p style="margin: 0.5rem 0; font-size: 0.9rem;">${data.notes}</p>` : ''}
-        <p style="margin: 0.5rem 0 0 0;">
-          <span style="color: ${data.completed ? '#44ff44' : '#ff4444'};">
-            ${data.completed ? '✓ Completed' : '○ Not completed'}
-          </span>
-        </p>
-        <button 
-          onclick="deleteMarker(${data.id})" 
-          style="
-            margin-top: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: #8b2424;
-            color: white;
-            border: 1px solid #ff4444;
-            cursor: pointer;
-            font-family: var(--font-display);
-            font-size: 0.8rem;
-            border-radius: 4px;
-          "
-        >
-          Delete
-        </button>
-      </div>
-    `;
-    
-    marker.bindPopup(popupContent);
-  }
+  //
 
   function getMarkerEmoji(type: string): string {
     const emojis: Record<string, string> = {
-      Quest: '📜',
-      Boss: '⚔️',
-      Item: '💎',
-      NPC: '👤',
-      Other: '📍',
+      Quest: "📜",
+      Boss: "⚔️",
+      Item: "💎",
+      NPC: "👤",
+      Other: "📍",
     };
-    return emojis[type] || '📍';
+    return emojis[type] || "📍";
   }
 
   (window as any).deleteMarker = (id: number) => {
-    markers = markers.filter(m => m.id !== id);
+    markers = markers.filter((m) => m.id !== id);
     saveMarkers();
     location.reload();
   };
 
   // ===== DRAWING FUNCTIONS =====
   function loadDrawings() {
-    const saved = localStorage.getItem('elden_drawings');
+    const saved = localStorage.getItem("elden_drawings");
     drawings = saved ? JSON.parse(saved) : [];
     drawings.forEach(renderDrawing);
   }
 
   function saveDrawings() {
-    localStorage.setItem('elden_drawings', JSON.stringify(drawings));
+    localStorage.setItem("elden_drawings", JSON.stringify(drawings));
   }
 
   function renderDrawing(data: any) {
     const coords = JSON.parse(data.coordinates);
     const style = JSON.parse(data.style);
-    
+
     const line = L.polyline(coords, style).addTo(map);
     allDrawingLayers.push(line);
   }
 
   function startDrawing(e: L.LeafletMouseEvent) {
-    if (currentMode !== 'draw' || currentTool === 'eraser') return;
-    
+    if (currentMode !== "draw" || currentTool === "eraser") return;
+
     isDrawing = true;
     currentPoints = [e.latlng];
 
@@ -327,17 +320,17 @@ import MarkerModal from '../components/MarkerModal.astro';
   }
 
   function continueDrawing(e: L.LeafletMouseEvent) {
-    if (!isDrawing || currentMode !== 'draw' || !currentPath) return;
+    if (!isDrawing || currentMode !== "draw" || !currentPath) return;
 
     currentPoints.push(e.latlng);
     currentPath.setLatLngs(currentPoints);
   }
 
   function finishDrawing(e: L.LeafletMouseEvent) {
-    if (!isDrawing || currentMode !== 'draw') return;
-    
+    if (!isDrawing || currentMode !== "draw") return;
+
     isDrawing = false;
-    
+
     if (currentPoints.length < 2) {
       if (currentPath) map.removeLayer(currentPath);
       currentPath = null;
@@ -347,10 +340,10 @@ import MarkerModal from '../components/MarkerModal.astro';
 
     if (currentPath) {
       allDrawingLayers.push(currentPath);
-      
+
       const drawing = {
         id: Date.now(),
-        coordinates: JSON.stringify(currentPoints.map(p => [p.lat, p.lng])),
+        coordinates: JSON.stringify(currentPoints.map((p) => [p.lat, p.lng])),
         style: JSON.stringify({
           color: currentColor,
           weight: currentWidth,
@@ -362,21 +355,21 @@ import MarkerModal from '../components/MarkerModal.astro';
       saveDrawings();
       showWarning();
     }
-    
+
     currentPath = null;
     currentPoints = [];
   }
 
   function handleEraser(e: L.LeafletMouseEvent) {
-    if (currentMode !== 'draw' || currentTool !== 'eraser') return;
-    
+    if (currentMode !== "draw" || currentTool !== "eraser") return;
+
     const clickPoint = e.latlng;
     let closestDrawing: L.Polyline | null = null;
     let minDistance = Infinity;
 
-    allDrawingLayers.forEach(drawing => {
+    allDrawingLayers.forEach((drawing) => {
       const latlngs = drawing.getLatLngs() as L.LatLng[];
-      latlngs.forEach(point => {
+      latlngs.forEach((point) => {
         const distance = clickPoint.distanceTo(point);
         if (distance < minDistance && distance < 50) {
           minDistance = distance;
@@ -387,30 +380,30 @@ import MarkerModal from '../components/MarkerModal.astro';
 
     if (closestDrawing) {
       map.removeLayer(closestDrawing);
-      allDrawingLayers = allDrawingLayers.filter(d => d !== closestDrawing);
+      allDrawingLayers = allDrawingLayers.filter((d) => d !== closestDrawing);
       location.reload(); // Simple refresh to sync with localStorage
     }
   }
 
   // ===== MODE SWITCHING =====
-  function switchMode(mode: 'marker' | 'draw') {
+  function switchMode(mode: "marker" | "draw") {
     currentMode = mode;
-    
-    const markerBtn = document.getElementById('marker-mode-btn');
-    const drawBtn = document.getElementById('draw-mode-btn');
-    const toolbar = document.getElementById('drawing-toolbar');
-    const mapContainer = document.getElementById('map');
 
-    if (mode === 'marker') {
-      markerBtn?.classList.add('active');
-      drawBtn?.classList.remove('active');
-      if (toolbar) toolbar.style.display = 'none';
-      mapContainer?.classList.remove('draw-mode');
+    const markerBtn = document.getElementById("marker-mode-btn");
+    const drawBtn = document.getElementById("draw-mode-btn");
+    const toolbar = document.getElementById("drawing-toolbar");
+    const mapContainer = document.getElementById("map");
+
+    if (mode === "marker") {
+      markerBtn?.classList.add("active");
+      drawBtn?.classList.remove("active");
+      if (toolbar) toolbar.style.display = "none";
+      mapContainer?.classList.remove("draw-mode");
     } else {
-      markerBtn?.classList.remove('active');
-      drawBtn?.classList.add('active');
-      if (toolbar) toolbar.style.display = 'flex';
-      mapContainer?.classList.add('draw-mode');
+      markerBtn?.classList.remove("active");
+      drawBtn?.classList.add("active");
+      if (toolbar) toolbar.style.display = "flex";
+      mapContainer?.classList.add("draw-mode");
     }
   }
 
@@ -419,97 +412,111 @@ import MarkerModal from '../components/MarkerModal.astro';
 
   function openMarkerModal(coords: L.LatLng) {
     pendingMarkerCoords = coords;
-    const modal = document.getElementById('marker-modal');
-    if (modal) modal.style.display = 'flex';
-    
-    (document.getElementById('marker-lat') as HTMLInputElement).value = coords.lat.toString();
-    (document.getElementById('marker-lng') as HTMLInputElement).value = coords.lng.toString();
+    const modal = document.getElementById("marker-modal");
+    if (modal) modal.style.display = "flex";
+
+    (document.getElementById("marker-lat") as HTMLInputElement).value =
+      coords.lat.toString();
+    (document.getElementById("marker-lng") as HTMLInputElement).value =
+      coords.lng.toString();
   }
 
   (window as any).closeMarkerModal = () => {
-    const modal = document.getElementById('marker-modal');
-    if (modal) modal.style.display = 'none';
-    
-    (document.getElementById('marker-form') as HTMLFormElement).reset();
+    const modal = document.getElementById("marker-modal");
+    if (modal) modal.style.display = "none";
+
+    (document.getElementById("marker-form") as HTMLFormElement).reset();
     pendingMarkerCoords = null;
   };
 
   // ===== EVENT LISTENERS =====
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener("DOMContentLoaded", () => {
     initMap();
 
     // Map click handler
-    map.on('click', (e) => {
-      if (currentMode === 'marker') {
+    map.on("click", (e) => {
+      if (currentMode === "marker") {
         openMarkerModal(e.latlng);
-      } else if (currentMode === 'draw' && currentTool === 'eraser') {
+      } else if (currentMode === "draw" && currentTool === "eraser") {
         handleEraser(e);
       }
     });
 
     // Drawing handlers
-    map.on('mousedown', startDrawing);
-    map.on('mousemove', continueDrawing);
-    map.on('mouseup', finishDrawing);
+    map.on("mousedown", startDrawing);
+    map.on("mousemove", continueDrawing);
+    map.on("mouseup", finishDrawing);
 
     // Mode switcher
-    document.getElementById('marker-mode-btn')?.addEventListener('click', () => {
-      switchMode('marker');
-    });
+    document
+      .getElementById("marker-mode-btn")
+      ?.addEventListener("click", () => {
+        switchMode("marker");
+      });
 
-    document.getElementById('draw-mode-btn')?.addEventListener('click', () => {
-      switchMode('draw');
+    document.getElementById("draw-mode-btn")?.addEventListener("click", () => {
+      switchMode("draw");
     });
 
     // Drawing tools
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-        (e.currentTarget as HTMLElement).classList.add('active');
-        currentTool = (e.currentTarget as HTMLElement).dataset.tool || 'pencil';
+    document.querySelectorAll(".tool-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        document
+          .querySelectorAll(".tool-btn")
+          .forEach((b) => b.classList.remove("active"));
+        (e.currentTarget as HTMLElement).classList.add("active");
+        currentTool = (e.currentTarget as HTMLElement).dataset.tool || "pencil";
       });
     });
 
     // Color buttons
-    document.querySelectorAll('.color-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-        (e.currentTarget as HTMLElement).classList.add('active');
-        currentColor = (e.currentTarget as HTMLElement).dataset.color || '#c19d53';
+    document.querySelectorAll(".color-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        document
+          .querySelectorAll(".color-btn")
+          .forEach((b) => b.classList.remove("active"));
+        (e.currentTarget as HTMLElement).classList.add("active");
+        currentColor =
+          (e.currentTarget as HTMLElement).dataset.color || "#c19d53";
       });
     });
 
     // Line width slider
-    const slider = document.getElementById('line-width') as HTMLInputElement;
-    const sizeValue = document.getElementById('size-value');
-    slider?.addEventListener('input', (e) => {
+    const slider = document.getElementById("line-width") as HTMLInputElement;
+    const sizeValue = document.getElementById("size-value");
+    slider?.addEventListener("input", (e) => {
       currentWidth = parseInt((e.target as HTMLInputElement).value);
       if (sizeValue) sizeValue.textContent = `${currentWidth}px`;
     });
 
     // Reset all
-    document.getElementById('reset-all-btn')?.addEventListener('click', () => {
-      if (confirm('Delete ALL markers and drawings? This cannot be undone.')) {
-        localStorage.removeItem('elden_markers');
-        localStorage.removeItem('elden_drawings');
+    document.getElementById("reset-all-btn")?.addEventListener("click", () => {
+      if (confirm("Delete ALL markers and drawings? This cannot be undone.")) {
+        localStorage.removeItem("elden_markers");
+        localStorage.removeItem("elden_drawings");
         location.reload();
       }
     });
 
     // Marker form submission
-    document.getElementById('marker-form')?.addEventListener('submit', (e) => {
+    document.getElementById("marker-form")?.addEventListener("submit", (e) => {
       e.preventDefault();
-      
+
       if (!pendingMarkerCoords) return;
 
       const formData = {
         id: Date.now(),
         lat: pendingMarkerCoords.lat,
         lng: pendingMarkerCoords.lng,
-        title: (document.getElementById('marker-title') as HTMLInputElement).value,
-        type: (document.getElementById('marker-type') as HTMLSelectElement).value,
-        notes: (document.getElementById('marker-notes') as HTMLTextAreaElement).value,
-        completed: (document.getElementById('marker-completed') as HTMLInputElement).checked,
+        title: (document.getElementById("marker-title") as HTMLInputElement)
+          .value,
+        type: (document.getElementById("marker-type") as HTMLSelectElement)
+          .value,
+        notes: (document.getElementById("marker-notes") as HTMLTextAreaElement)
+          .value,
+        completed: (
+          document.getElementById("marker-completed") as HTMLInputElement
+        ).checked,
       };
 
       markers.push(formData);
@@ -520,7 +527,9 @@ import MarkerModal from '../components/MarkerModal.astro';
     });
   });
 
+  
+
   (window as any).showAuthModal = () => {
-    alert('OAuth login coming soon! For now, your data is saved locally.');
+    alert("OAuth login coming soon! For now, your data is saved locally.");
   };
 </script>

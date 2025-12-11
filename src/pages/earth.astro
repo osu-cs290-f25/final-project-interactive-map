@@ -1,17 +1,18 @@
 ---
-import Layout from "../layouts/Layout.astro";
+import Layout from '../layouts/Layout.astro';
+import WarningBanner from '../components/WarningBanner.astro';
 ---
 
 <Layout title="The Original Lands - Earth">
+  <WarningBanner />
+  
   <main>
-    <!-- Header -->
     <header class="hero">
       <h1 class="hero-title">EARTH</h1>
       <div class="hero-divider"></div>
       <p class="hero-subtitle">The Original Lands</p>
     </header>
 
-    <!-- Map Container -->
     <section class="map-section">
       <div id="map"></div>
     </section>
@@ -28,17 +29,13 @@ import Layout from "../layouts/Layout.astro";
   .hero {
     padding: 3rem 2rem 2rem;
     text-align: center;
-    background: linear-gradient(
-      180deg,
-      var(--black) 0%,
-      var(--black-light) 100%
-    );
+    background: linear-gradient(180deg, var(--black) 0%, var(--black-light) 100%);
     border-bottom: 2px solid var(--bronze);
     position: relative;
   }
 
   .hero::after {
-    content: "";
+    content: '';
     position: absolute;
     bottom: -1px;
     left: 50%;
@@ -51,7 +48,7 @@ import Layout from "../layouts/Layout.astro";
   .hero-title {
     font-size: clamp(2.5rem, 8vw, 5rem);
     color: var(--gold);
-    text-shadow:
+    text-shadow: 
       0 0 20px rgba(193, 157, 83, 0.3),
       0 4px 8px rgba(0, 0, 0, 0.8);
     margin-bottom: 1rem;
@@ -68,7 +65,7 @@ import Layout from "../layouts/Layout.astro";
 
   .hero-divider::before,
   .hero-divider::after {
-    content: "";
+    content: '';
     position: absolute;
     width: 8px;
     height: 8px;
@@ -78,12 +75,8 @@ import Layout from "../layouts/Layout.astro";
     transform: translateY(-50%);
   }
 
-  .hero-divider::before {
-    left: -12px;
-  }
-  .hero-divider::after {
-    right: -12px;
-  }
+  .hero-divider::before { left: -12px; }
+  .hero-divider::after { right: -12px; }
 
   .hero-subtitle {
     font-size: clamp(0.9rem, 2vw, 1.2rem);
@@ -110,6 +103,7 @@ import Layout from "../layouts/Layout.astro";
   :global(.leaflet-container) {
     background: var(--black-light);
     font-family: var(--font-body);
+    cursor: crosshair;
   }
 
   :global(.leaflet-popup-content-wrapper) {
@@ -132,7 +126,7 @@ import Layout from "../layouts/Layout.astro";
   :global(.marker-x) {
     font-size: 24px;
     color: #c19d53;
-    text-shadow:
+    text-shadow: 
       0 0 10px rgba(193, 157, 83, 0.8),
       0 0 20px rgba(193, 157, 83, 0.5),
       0 0 30px rgba(193, 157, 83, 0.3);
@@ -149,13 +143,8 @@ import Layout from "../layouts/Layout.astro";
   }
 
   @keyframes pulse {
-    0%,
-    100% {
-      opacity: 0.3;
-    }
-    50% {
-      opacity: 0.6;
-    }
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
   }
 
   :global(.marker-popup) {
@@ -178,6 +167,7 @@ import Layout from "../layouts/Layout.astro";
     font-size: 0.75rem;
     letter-spacing: 0.05em;
     transition: all 0.2s;
+    border-radius: 4px;
   }
 
   :global(.delete-btn:hover) {
@@ -201,83 +191,109 @@ import Layout from "../layouts/Layout.astro";
 </style>
 
 <script>
-  import L from "leaflet";
+  import L from 'leaflet';
 
-  // Initialize map
-  const map = L.map("map").setView([20, 0], 2);
+  let map: L.Map;
+  let markers: any[] = [];
 
-  // Dark tile layer from CartoDB
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19,
-    minZoom: 2,
-  }).addTo(map);
+  function isLoggedIn() {
+    return document.cookie.includes('session=');
+  }
 
-  // Custom "X" icon with glow
-  const xIcon = L.divIcon({
-    className: "custom-marker",
-    html: '<div class="marker-x">✕</div>',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-  });
+  function showWarning() {
+    if (!isLoggedIn()) {
+      const banner = document.getElementById('warning-banner');
+      if (banner) banner.style.display = 'flex';
+    }
+  }
 
-  // Load saved markers from localStorage
   function loadMarkers() {
-    const saved = localStorage.getItem("earthMarkers");
-    return saved ? JSON.parse(saved) : [];
+    const saved = localStorage.getItem('earth_markers');
+    markers = saved ? JSON.parse(saved) : [];
+    markers.forEach(renderMarker);
   }
 
-  // Save markers to localStorage
-  function saveMarkers(markers) {
-    localStorage.setItem("earthMarkers", JSON.stringify(markers));
+  function saveMarkers() {
+    localStorage.setItem('earth_markers', JSON.stringify(markers));
   }
 
-  let markers = loadMarkers();
+  function renderMarker(data: any) {
+    const xIcon = L.divIcon({
+      className: 'custom-marker',
+      html: '<div class="marker-x">✕</div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
 
-  // Render existing markers
-  markers.forEach((data) => {
-    createMarker(data.lat, data.lng, data.text);
-  });
-
-  // Create marker with glow
-  function createMarker(lat, lng, text) {
-    // Add glowing circle
-    const circle = L.circle([lat, lng], {
-      color: "#c19d53",
-      fillColor: "#c19d53",
+    // Glowing circle
+    L.circle([data.lat, data.lng], {
+      color: '#c19d53',
+      fillColor: '#c19d53',
       fillOpacity: 0.15,
-      radius: 5000, // 50km radius
+      radius: 50000,
       weight: 2,
-      className: "glow-circle",
+      className: 'glow-circle'
     }).addTo(map);
 
-    const marker = L.marker([lat, lng], { icon: xIcon }).addTo(map);
+    // X marker
+    const marker = L.marker([data.lat, data.lng], { icon: xIcon }).addTo(map);
 
+    // security: escape user input
+    const safeText = escapeHtml(data.text || '');
+    
     const popupContent = `
       <div class="marker-popup">
-        <p>${text || "<em>No notes</em>"}</p>
-        <button class="delete-btn" onclick="deleteMarker(${lat}, ${lng})">Delete</button>
+        <p>${data.text || '<em>No notes</em>'}</p>
+        <button class="delete-btn" onclick="deleteMarker(${data.id})">Delete</button>
       </div>
     `;
     marker.bindPopup(popupContent);
   }
 
-  map.on("click", (e) => {
-    const text = prompt("Add a note for this location:");
-    if (text !== null && text.trim() !== "") {
-      const { lat, lng } = e.latlng;
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text'
+    return div.innerHTML;
+  }
 
-      markers.push({ lat, lng, text });
-      saveMarkers(markers);
+  (window as any).deleteMarker = (id: number) => {
+    markers = markers.filter(m => m.id !== id);
+    saveMarkers();
+    location.reload();
+  };
 
-      createMarker(lat, lng, text);
-    }
+  document.addEventListener('DOMContentLoaded', () => {
+    map = L.map('map').setView([20, 0], 2);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+      minZoom: 2
+    }).addTo(map);
+
+    loadMarkers();
+    showWarning();
+
+    // Click to add marker
+    map.on('click', (e) => {
+      const text = prompt('Add a note for this location:');
+      if (text !== null && text.trim() !== '') {
+        const marker = {
+          id: Date.now(),
+          lat: e.latlng.lat,
+          lng: e.latlng.lng,
+          text: text.trim()
+        };
+
+        markers.push(marker);
+        saveMarkers();
+        renderMarker(marker);
+        showWarning();
+      }
+    });
   });
 
-  window.deleteMarker = (lat, lng) => {
-    markers = markers.filter((m) => m.lat !== lat || m.lng !== lng);
-    saveMarkers(markers);
-    location.reload();
+  (window as any).showAuthModal = () => {
+    alert('OAuth login coming soon! For now, your data is saved locally.');
   };
 </script>
